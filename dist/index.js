@@ -50,7 +50,7 @@ const axios_1 = __importDefault(require("axios"));
 const zod_1 = require("./zod");
 const client_1 = require("@prisma/client");
 const dotenv = __importStar(require("dotenv"));
-dotenv.config({ path: "/media/priyanshu-tak/New Volume/Projects/Reliance orbits/backend" + '/.env' });
+dotenv.config({ path: __dirname + '../.env' });
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
 const prisma = new client_1.PrismaClient();
