@@ -1,11 +1,13 @@
 import express from "express"
 import axios from "axios"
+import cors from  "cors"
 import { calculatePrice, createUser, location, loginWithEmail, loginWithNumber } from "./zod"
 import { PrismaClient } from "@prisma/client";
 import * as dotenv from "dotenv";
 dotenv.config({ path: __dirname + '../.env' });
 const app = express()
 app.use(express.json())
+app.use(cors());
 const prisma = new PrismaClient()
 const mile = 1609.344
 
