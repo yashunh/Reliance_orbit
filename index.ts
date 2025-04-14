@@ -11,7 +11,7 @@ app.use(cors());
 const prisma = new PrismaClient()
 const mile = 1609.344
 
-app.get("/price", async(req,res)=>{
+app.post("/price", async(req,res)=>{
     const result = calculatePrice.safeParse(req.body)
     if(!result.success){
         res.status(400).send("invalid inputs")
@@ -138,7 +138,7 @@ app.post("/order/create", async(req,res)=>{
 
 })
 
-app.get("/autocomplete" ,async(req,res)=>{
+app.post("/autocomplete" ,async(req,res)=>{
     const { place } = req.body
     if(!location.safeParse(place).success ){
         res.status(400).send("invalid inputs")
@@ -151,7 +151,7 @@ app.get("/autocomplete" ,async(req,res)=>{
     res.send(response.data)
 })
 
-app.get("/distance", async(req,res)=>{
+app.post("/distance", async(req,res)=>{
     const {origin, destination}  = req.body
     if(!location.safeParse(origin).success || !location.safeParse(destination).success){
         res.status(400).send("invalid inputs")
