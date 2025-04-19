@@ -47,15 +47,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const axios_1 = __importDefault(require("axios"));
+const cors_1 = __importDefault(require("cors"));
 const zod_1 = require("./zod");
 const client_1 = require("@prisma/client");
 const dotenv = __importStar(require("dotenv"));
 dotenv.config({ path: __dirname + '../.env' });
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
+app.use((0, cors_1.default)());
 const prisma = new client_1.PrismaClient();
 const mile = 1609.344;
-app.get("/price", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+app.post("/price", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const result = zod_1.calculatePrice.safeParse(req.body);
     if (!result.success) {
         res.status(400).send("invalid inputs");
@@ -138,49 +140,95 @@ app.post("/user/create", (req, res) => __awaiter(void 0, void 0, void 0, functio
         user: newUser
     });
 }));
-app.post("/user/login/email", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = zod_1.loginWithEmail.safeParse(req.body);
+app.get("/user/login/email/:email", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = zod_1.emailSchema.safeParse(req.params.email);
     if (!result.success) {
         res.status(400).send("invalid inputs");
     }
     const user = yield prisma.user.findFirst({
         where: {
-            email: req.body.email
+            email: req.params.email
         }
     });
-    if (user) {
-        res.send({
-            msg: "user found",
-            user: user
+    if (!user) {
+        res.status(400).send({
+            msg: "inavlid user"
         });
     }
-    res.status(400).send({
-        msg: "inavlid user",
+    res.send({
+        msg: "user found",
+        user: user
     });
 }));
-app.post("/user/login/number", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = zod_1.loginWithNumber.safeParse(req.body);
+app.get("/user/login/number/:number", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = zod_1.phoneNumberSchema.safeParse(req.params.number);
     if (!result.success) {
         res.status(400).send("invalid inputs");
     }
     const user = yield prisma.user.findFirst({
         where: {
-            phoneNumber: req.body.phoneNumber
+            phoneNumber: req.params.number
         }
     });
-    if (user) {
-        res.send({
-            msg: "user found",
-            user: user
+    if (!user) {
+        res.status(400).send({
+            msg: "inavlid user"
         });
     }
-    res.status(400).send({
-        msg: "inavlid user",
+    res.send({
+        msg: "user found",
+        user: user
     });
 }));
 app.post("/order/create", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 }));
-app.get("/autocomplete", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+app.get("/order/history/email/:email", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = zod_1.emailSchema.safeParse(req.params.email);
+    if (!result.success) {
+        res.status(400).send("invalid inputs");
+    }
+    const user = yield prisma.user.findFirst({
+        where: {
+            email: req.params.email
+        },
+        include: {
+            orders: true
+        }
+    });
+    if (!user) {
+        res.status(400).send({
+            msg: "inavlid user"
+        });
+    }
+    res.send({
+        msg: "user found",
+        user: user
+    });
+}));
+app.get("/order/history/number/:number", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = zod_1.emailSchema.safeParse(req.params.number);
+    if (!result.success) {
+        res.status(400).send("invalid inputs");
+    }
+    const user = yield prisma.user.findFirst({
+        where: {
+            phoneNumber: req.params.number
+        },
+        include: {
+            orders: true
+        }
+    });
+    if (!user) {
+        res.status(400).send({
+            msg: "inavlid user"
+        });
+    }
+    res.send({
+        msg: "user found",
+        user: user
+    });
+}));
+app.post("/autocomplete", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { place } = req.body;
     if (!zod_1.location.safeParse(place).success) {
         res.status(400).send("invalid inputs");
@@ -192,7 +240,7 @@ app.get("/autocomplete", (req, res) => __awaiter(void 0, void 0, void 0, functio
     });
     res.send(response.data);
 }));
-app.get("/distance", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+app.post("/distance", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { origin, destination } = req.body;
     if (!zod_1.location.safeParse(origin).success || !zod_1.location.safeParse(destination).success) {
         res.status(400).send("invalid inputs");

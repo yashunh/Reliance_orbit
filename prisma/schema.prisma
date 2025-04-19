@@ -32,6 +32,7 @@ model Order{
   dateTime DateTime
   pickupdDate DateTime
   dropDate DateTime
+  details Json
   from Location @relation("fromLocation",fields: [fromLocation], references: [id])
   toLocation Int
   to Location @relation("toLocation",fields: [toLocation], references: [id])

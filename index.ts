@@ -1,7 +1,7 @@
 import express from "express"
 import axios from "axios"
 import cors from  "cors"
-import { calculatePrice, createUser, location, loginWithEmail, loginWithNumber } from "./zod"
+import { calculatePrice, createUser, emailSchema, location, phoneNumberSchema } from "./zod"
 import { PrismaClient } from "@prisma/client";
 import * as dotenv from "dotenv";
 dotenv.config({ path: __dirname + '../.env' });
@@ -92,50 +92,98 @@ app.post("/user/create", async(req,res)=>{
     }) 
 })
 
-app.post("/user/login/email", async(req,res)=>{
-    const result = loginWithEmail.safeParse(req.body)
+app.get("/user/login/email/:email", async(req,res)=>{
+    const result = emailSchema.safeParse(req.params.email)
     if(!result.success){
         res.status(400).send("invalid inputs")
     }
     const user = await prisma.user.findFirst({
         where: {
-            email: req.body.email
+            email: req.params.email
         }
     })
-    if(user){
-        res.send({
-            msg: "user found",
-            user: user
-        }) 
+    if(!user){
+        res.status(400).send({
+            msg: "inavlid user"
+        })    
     }
-    res.status(400).send({
-        msg: "inavlid user",
-    }) 
+    res.send({
+        msg: "user found",
+        user: user
+    })
 })
 
-app.post("/user/login/number", async(req,res)=>{
-    const result = loginWithNumber.safeParse(req.body)
+app.get("/user/login/number/:number", async(req,res)=>{
+    const result = phoneNumberSchema.safeParse(req.params.number)
     if(!result.success){
         res.status(400).send("invalid inputs")
     }
     const user = await prisma.user.findFirst({
         where: {
-            phoneNumber: req.body.phoneNumber
+            phoneNumber: req.params.number
         }
     })
-    if(user){
-        res.send({
-            msg: "user found",
-            user: user
-        }) 
+    if(!user){
+        res.status(400).send({
+            msg: "inavlid user"
+        })    
     }
-    res.status(400).send({
-        msg: "inavlid user",
-    }) 
+    res.send({
+        msg: "user found",
+        user: user
+    })
 })
 
 app.post("/order/create", async(req,res)=>{
+     
+})
 
+app.get("/order/history/email/:email", async(req,res)=>{
+    const result = emailSchema.safeParse(req.params.email)
+    if(!result.success){
+        res.status(400).send("invalid inputs")
+    }
+    const user = await prisma.user.findFirst({
+        where: {
+            email: req.params.email
+        },
+        include: {
+            orders: true
+        }
+    })
+    if(!user){
+        res.status(400).send({
+            msg: "inavlid user"
+        })    
+    }
+    res.send({
+        msg: "user found",
+        user: user
+    })
+})
+
+app.get("/order/history/number/:number", async(req,res)=>{
+    const result = emailSchema.safeParse(req.params.number)
+    if(!result.success){
+        res.status(400).send("invalid inputs")
+    }
+    const user = await prisma.user.findFirst({
+        where: {
+            phoneNumber: req.params.number
+        },
+        include: {
+            orders: true
+        }
+    })
+    if(!user){
+        res.status(400).send({
+            msg: "inavlid user"
+        })    
+    }
+    res.send({
+        msg: "user found",
+        user: user
+    })
 })
 
 app.post("/autocomplete" ,async(req,res)=>{

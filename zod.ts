@@ -14,6 +14,10 @@ export const propertyType = z.string()
 
 export const distance = z.number()
 
+export const emailSchema = z.string().email()
+
+export const phoneNumberSchema = z.string()
+
 export const pickupLocation = z.object({
     location: location,
     floor: pickupFloor,
@@ -35,13 +39,5 @@ export const calculatePrice = z.object({
 export const createUser = z.object({
     username: z.string(),
     email: z.string().email(),
-    phoneNumber: z.string()
-})
-
-export const loginWithEmail = z.object({
-    email: z.string().email(),
-})
-
-export const loginWithNumber = z.object({
     phoneNumber: z.string()
 })
