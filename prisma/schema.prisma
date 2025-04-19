@@ -13,37 +13,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User{
+model Booking {
   id Int @id @default(autoincrement())
   username String
-  email String @unique
-  phoneNumber String @unique
-  orders Order[]
-}
-
-model Order{
-  id Int @id @default(autoincrement())
-  userId Int
-  user User @relation(fields: [userId], references: [id])
+  email String 
+  phoneNumber String
   price Int
   distance Float
   route String
-  fromLocation Int
-  dateTime DateTime
-  pickupdDate DateTime
-  dropDate DateTime
+  fromLocation Json
+  toLocation Json
+  createdAt String
+  pickupdDate String
+  pickupdTime String
+  dropDate String
+  dropTime String
   details Json
-  from Location @relation("fromLocation",fields: [fromLocation], references: [id])
-  toLocation Int
-  to Location @relation("toLocation",fields: [toLocation], references: [id])
-}
-
-model Location{
-  id Int @id @default(autoincrement())
-  address String
-  floor Int @default(0)
-  lift Boolean @default(false)
-  propertyType String?
-  from Order[]  @relation("fromLocation")
-  to Order[]  @relation("toLocation")
 }
