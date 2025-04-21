@@ -1,63 +1,31 @@
 import express from "express"
 import axios from "axios"
-import cors from  "cors"
-import { calculatePrice, createUser, emailSchema, location, newSchema, phoneNumberSchema } from "./zod"
+import cors from "cors"
+import { calculatePriceSchema, createUser, emailSchema, location, newSchema, phoneNumberSchema, worker } from "./zod"
 import { PrismaClient } from "@prisma/client";
 import * as dotenv from "dotenv";
+import calculatePrice from "./price";
+
 dotenv.config({ path: __dirname + '../.env' });
 const app = express()
 app.use(express.json())
 app.use(cors());
 const prisma = new PrismaClient()
-const mile = 1609.344
 
-app.post("/price", async(req,res)=>{
-    const result = calculatePrice.safeParse(req.body)
-    if(!result.success){
+app.post("/price", async (req, res) => {
+    const result = calculatePriceSchema.safeParse(req.body)
+    if (!result.success) {
         res.status(400).send("invalid inputs")
     }
-    const {pickupLocation, dropLocation, vanType, extraWorker} = req.body
-    const getLocationDetails = await axios.get(process.env.DISTANCE_API || "", {
+    const { pickupLocation, dropLocation, vanType, worker } = req.body
+    const locationDetails = await axios.get(process.env.DISTANCE_API || "", {
         params: {
             origins: pickupLocation.location,
-            destinations: dropLocation.location 
+            destinations: dropLocation.location
         }
     })
-    let price = 0;
-    if(pickupLocation.lift){
-        price += 30
-    } else if(pickupLocation.floor <= 5 && pickupLocation.floor >= 0){
-        price += pickupLocation.floor * 10;
-    }
-
-    if(vanType === "Small"){
-        price += 60
-    } else if(vanType === "Medium"){
-        price += 70
-    } else if(vanType === "Large"){
-        price += 80
-    } else if(vanType === "Luton"){
-        price += 90
-    }
-    
-    if(extraWorker == 1){
-        price += 20
-    } else if(extraWorker == 2){
-        price += 40
-    }
-
-    const distance = getLocationDetails.data.rows[0].elements[0].distance.value / mile
-    if(distance <= 30){
-        price += distance * 2
-    } else if(distance <= 60){
-        price += distance * 1.5
-    } else if(distance <= 90){
-        price += distance * 1.3
-    } else{
-        price += distance
-    }
-
-    res.send({price})
+    let price = calculatePrice(pickupLocation, dropLocation, vanType, worker, locationDetails)
+    res.send({ price })
 })
 
 // app.post("/user/create", async(req,res)=>{
@@ -135,7 +103,7 @@ app.post("/price", async(req,res)=>{
 // })
 
 // app.post("/order/create", async(req,res)=>{
-     
+
 // })
 
 // app.get("/order/history/email/:email", async(req,res)=>{
@@ -186,12 +154,12 @@ app.post("/price", async(req,res)=>{
 //     })
 // })
 
-app.post("/autocomplete" ,async(req,res)=>{
+app.post("/autocomplete", async (req, res) => {
     const { place } = req.body
-    if(!location.safeParse(place).success ){
+    if (!location.safeParse(place).success) {
         res.status(400).send("invalid inputs")
     }
-    const response = await axios.get(process.env.AUTOCOMPLETE_API|| "", {
+    const response = await axios.get(process.env.AUTOCOMPLETE_API || "", {
         params: {
             input: place,
         }
@@ -199,29 +167,29 @@ app.post("/autocomplete" ,async(req,res)=>{
     res.send(response.data)
 })
 
-app.post("/distance", async(req,res)=>{
-    const {origin, destination}  = req.body
-    if(!location.safeParse(origin).success || !location.safeParse(destination).success){
+app.post("/distance", async (req, res) => {
+    const { origin, destination } = req.body
+    if (!location.safeParse(origin).success || !location.safeParse(destination).success) {
         res.status(400).send("invalid inputs")
     }
     const response = await axios.get(process.env.DISTANCE_API || "", {
         params: {
             origins: origin,
-            destinations: destination 
+            destinations: destination
         }
     })
     res.send(response.data)
 })
 
-app.post("/new", async(req,res)=>{
+app.post("/new", async (req, res) => {
     const result = newSchema.safeParse(req.body)
-    if(!result.success){
-        res.status(400).send("invalid inputs")
+    if (!result.success) {
+        res.status(400).send({msg: "invalid inputs",
+            result
+        })
     }
-    const createdAt = new Date().toLocaleString();
-    req.body.createdAt = createdAt
     const newOrder = await prisma.booking.create({
-        data:req.body
+        data: req.body
     })
     res.send({
         msg: "order created",
@@ -229,9 +197,9 @@ app.post("/new", async(req,res)=>{
     })
 })
 
-app.get("/history/:email", async(req,res)=>{
+app.get("/history/:email", async (req, res) => {
     const result = emailSchema.safeParse(req.params.email)
-    if(!result.success){
+    if (!result.success) {
         res.status(400).send("invalid inputs")
     }
     const history = await prisma.booking.findMany({
@@ -240,10 +208,10 @@ app.get("/history/:email", async(req,res)=>{
         },
         take: 20
     })
-    if(!history){
+    if (!history) {
         res.status(400).send({
             msg: "no history"
-        })    
+        })
     }
     res.send({
         msg: "user found",
@@ -251,4 +219,14 @@ app.get("/history/:email", async(req,res)=>{
     })
 })
 
-app.listen(3000,()=>console.log('server at 3000'))
+app.get("/history/all/:key" ,async (req, res) => {
+    if (req.params.key !== "rishi") {
+        res.status(400).send("unauthorized")
+    }
+    const history = await prisma.booking.findMany()
+    res.send({
+        history
+    })
+})
+
+app.listen(3000, () => console.log('server at 3000'))

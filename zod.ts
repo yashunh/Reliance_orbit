@@ -2,9 +2,9 @@ import { z } from "zod"
 
 export const vanType = z.enum(["Small", "Medium", "Large", "Luton"])
 
-export const extraWorker = z.number().min(0)
+export const worker = z.number().min(0)
 
-export const pickupFloor = z.number().min(0)
+export const floorSchema = z.number().min(0)
 
 export const isLiftAvaialble = z.boolean()
 
@@ -20,21 +20,23 @@ export const phoneNumberSchema = z.string()
 
 export const pickupLocation = z.object({
     location: location,
-    floor: pickupFloor,
+    floor: floorSchema,
     lift: isLiftAvaialble,
     propertyType: propertyType.optional()
 })
 
 export const dropLocation = z.object({
     location: location,
-    floor: pickupFloor
+    floor: floorSchema,
+    lift: isLiftAvaialble,
+    propertyType: propertyType.optional()
 })
 
-export const calculatePrice = z.object({
+export const calculatePriceSchema = z.object({
     pickupLocation: pickupLocation,
     dropLocation: dropLocation,
     vanType: vanType,
-    extraWorker: extraWorker
+    worker: worker
 })
 
 export const createUser = z.object({
@@ -58,5 +60,11 @@ export const newSchema = z.object({
     pickupdTime: z.string(),
     dropDate: z.string(),
     dropTime: z.string(),
+    duration: z.string(),
+    quotationRef: z.string(),
+    pickupAddress: z.object({}),
+    dropAddress: z.object({}),
+    vanType: vanType,
+    worker: worker,
     details: orderDetails
 })

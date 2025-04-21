@@ -51,62 +51,25 @@ const cors_1 = __importDefault(require("cors"));
 const zod_1 = require("./zod");
 const client_1 = require("@prisma/client");
 const dotenv = __importStar(require("dotenv"));
+const price_1 = __importDefault(require("./price"));
 dotenv.config({ path: __dirname + '../.env' });
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
 app.use((0, cors_1.default)());
 const prisma = new client_1.PrismaClient();
-const mile = 1609.344;
 app.post("/price", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = zod_1.calculatePrice.safeParse(req.body);
+    const result = zod_1.calculatePriceSchema.safeParse(req.body);
     if (!result.success) {
         res.status(400).send("invalid inputs");
     }
-    const { pickupLocation, dropLocation, vanType, extraWorker } = req.body;
-    const getLocationDetails = yield axios_1.default.get(process.env.DISTANCE_API || "", {
+    const { pickupLocation, dropLocation, vanType, worker } = req.body;
+    const locationDetails = yield axios_1.default.get(process.env.DISTANCE_API || "", {
         params: {
             origins: pickupLocation.location,
             destinations: dropLocation.location
         }
     });
-    let price = 0;
-    if (pickupLocation.lift) {
-        price += 30;
-    }
-    else if (pickupLocation.floor <= 5 && pickupLocation.floor >= 0) {
-        price += pickupLocation.floor * 10;
-    }
-    if (vanType === "Small") {
-        price += 60;
-    }
-    else if (vanType === "Medium") {
-        price += 70;
-    }
-    else if (vanType === "Large") {
-        price += 80;
-    }
-    else if (vanType === "Luton") {
-        price += 90;
-    }
-    if (extraWorker == 1) {
-        price += 20;
-    }
-    else if (extraWorker == 2) {
-        price += 40;
-    }
-    const distance = getLocationDetails.data.rows[0].elements[0].distance.value / mile;
-    if (distance <= 30) {
-        price += distance * 2;
-    }
-    else if (distance <= 60) {
-        price += distance * 1.5;
-    }
-    else if (distance <= 90) {
-        price += distance * 1.3;
-    }
-    else {
-        price += distance;
-    }
+    let price = (0, price_1.default)(pickupLocation, dropLocation, vanType, worker, locationDetails);
     res.send({ price });
 }));
 // app.post("/user/create", async(req,res)=>{
@@ -256,10 +219,10 @@ app.post("/distance", (req, res) => __awaiter(void 0, void 0, void 0, function* 
 app.post("/new", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const result = zod_1.newSchema.safeParse(req.body);
     if (!result.success) {
-        res.status(400).send("invalid inputs");
+        res.status(400).send({ msg: "invalid inputs",
+            result
+        });
     }
-    const createdAt = new Date().toLocaleString();
-    req.body.createdAt = createdAt;
     const newOrder = yield prisma.booking.create({
         data: req.body
     });
@@ -286,6 +249,15 @@ app.get("/history/:email", (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
     res.send({
         msg: "user found",
+        history
+    });
+}));
+app.get("/history/all/:key", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    if (req.params.key !== "rishi") {
+        res.status(400).send("unauthorized");
+    }
+    const history = yield prisma.booking.findMany();
+    res.send({
         history
     });
 }));

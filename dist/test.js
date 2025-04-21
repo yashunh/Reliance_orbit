@@ -1,5 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const zod_1 = require("zod");
-const num = zod_1.z.number();
-console.log(num.safeParse(5.6));
+const client_1 = require("@prisma/client");
+const prisma = new client_1.PrismaClient();
+prisma.booking.deleteMany().then((res) => {
+    console.log(res);
+});
