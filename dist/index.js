@@ -203,6 +203,26 @@ app.post("/autocomplete", (req, res) => __awaiter(void 0, void 0, void 0, functi
     });
     res.send(response.data);
 }));
+app.get("/postalcode/:place_id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const place_id = req.params.place_id;
+    if (!zod_1.location.safeParse(place_id).success) {
+        res.status(400).send("invalid inputs");
+    }
+    const data = yield axios_1.default.get(process.env.PLACE_API || "", {
+        params: {
+            place_id: place_id
+        }
+    });
+    const { lat, lng } = data.data.result.geometry.location;
+    const latlng = lat + "," + lng;
+    const response = yield axios_1.default.get(process.env.GEOCODE_API || "", {
+        params: {
+            latlng: latlng
+        }
+    });
+    const postalCode = response.data.results[0].address_components.find((c) => c.types.includes("postal_code"));
+    res.send(postalCode);
+}));
 app.post("/distance", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { origin, destination } = req.body;
     if (!zod_1.location.safeParse(origin).success || !zod_1.location.safeParse(destination).success) {
