@@ -12,10 +12,13 @@ app.use(express.json())
 app.use(cors());
 const prisma = new PrismaClient()
 
-app.post("/price", async (req, res) => {
+app.post("/price", async (req, res): Promise<any> => {
     const result = calculatePriceSchema.safeParse(req.body)
     if (!result.success) {
-        res.status(400).send("invalid inputs")
+        return res.status(400).send({
+            msg: "invalid inputs",
+            result
+        })
     }
     const { pickupLocation, dropLocation, vanType, worker } = req.body
     const locationDetails = await axios.get(process.env.DISTANCE_API || "", {
@@ -25,13 +28,13 @@ app.post("/price", async (req, res) => {
         }
     })
     let price = calculatePrice(pickupLocation, dropLocation, vanType, worker, locationDetails)
-    res.send({ price })
+    return res.send({ price })
 })
 
 // app.post("/user/create", async(req,res)=>{
 //     const result = createUser.safeParse(req.body)
 //     if(!result.success){
-//         res.status(400).send("invalid inputs")
+//         res.status(400).send({msg:"invalid inputs",result})
 //     }
 //     const user = await prisma.user.findFirst({
 //         where: {
@@ -63,7 +66,7 @@ app.post("/price", async (req, res) => {
 // app.get("/user/login/email/:email", async(req,res)=>{
 //     const result = emailSchema.safeParse(req.params.email)
 //     if(!result.success){
-//         res.status(400).send("invalid inputs")
+//         res.status(400).send({msg:"invalid inputs",result})
 //     }
 //     const user = await prisma.user.findFirst({
 //         where: {
@@ -84,7 +87,7 @@ app.post("/price", async (req, res) => {
 // app.get("/user/login/number/:number", async(req,res)=>{
 //     const result = phoneNumberSchema.safeParse(req.params.number)
 //     if(!result.success){
-//         res.status(400).send("invalid inputs")
+//         res.status(400).send({msg:"invalid inputs",result})
 //     }
 //     const user = await prisma.user.findFirst({
 //         where: {
@@ -109,7 +112,7 @@ app.post("/price", async (req, res) => {
 // app.get("/order/history/email/:email", async(req,res)=>{
 //     const result = emailSchema.safeParse(req.params.email)
 //     if(!result.success){
-//         res.status(400).send("invalid inputs")
+//         res.status(400).send({msg:"invalid inputs",result})
 //     }
 //     const user = await prisma.user.findFirst({
 //         where: {
@@ -133,7 +136,7 @@ app.post("/price", async (req, res) => {
 // app.get("/order/history/number/:number", async(req,res)=>{
 //     const result = emailSchema.safeParse(req.params.number)
 //     if(!result.success){
-//         res.status(400).send("invalid inputs")
+//         res.status(400).send({msg:"invalid inputs",result})
 //     }
 //     const user = await prisma.user.findFirst({
 //         where: {
@@ -154,23 +157,23 @@ app.post("/price", async (req, res) => {
 //     })
 // })
 
-app.post("/autocomplete", async (req, res) => {
+app.post("/autocomplete", async (req, res): Promise<any> => {
     const { place } = req.body
     if (!location.safeParse(place).success) {
-        res.status(400).send("invalid inputs")
+        return res.status(400).send({ msg: "invalid inputs"})
     }
     const response = await axios.get(process.env.AUTOCOMPLETE_API || "", {
         params: {
             input: place,
         }
     })
-    res.send(response.data)
+    return res.send(response.data)
 })
 
-app.get("/postalcode/:place_id", async (req, res) => {
-    const place_id  = req.params.place_id
+app.get("/postalcode/:place_id", async (req, res): Promise<any> => {
+    const place_id = req.params.place_id
     if (!location.safeParse(place_id).success) {
-        res.status(400).send("invalid inputs")
+        return res.status(400).send({ msg: "invalid inputs"})
     }
     const data = await axios.get(process.env.PLACE_API || "", {
         params: {
@@ -185,13 +188,13 @@ app.get("/postalcode/:place_id", async (req, res) => {
         }
     })
     const postalCode = response.data.results[0].address_components.find((c: any) => c.types.includes("postal_code"));
-    res.send(postalCode)
+    return res.send(postalCode)
 })
 
-app.post("/distance", async (req, res) => {
+app.post("/distance", async (req, res): Promise<any> => {
     const { origin, destination } = req.body
     if (!location.safeParse(origin).success || !location.safeParse(destination).success) {
-        res.status(400).send("invalid inputs")
+        return res.status(400).send({ msg: "invalid inputs"})
     }
     const response = await axios.get(process.env.DISTANCE_API || "", {
         params: {
@@ -199,29 +202,33 @@ app.post("/distance", async (req, res) => {
             destinations: destination
         }
     })
-    res.send(response.data)
+    return res.send(response.data)
 })
 
-app.post("/new", async (req, res) => {
+app.post("/new", async (req, res): Promise<any> => {
     const result = newSchema.safeParse(req.body)
     if (!result.success) {
-        res.status(400).send({msg: "invalid inputs",
+        return res.status(400).send({
+            msg: "invalid inputs",
             result
         })
     }
     const newOrder = await prisma.booking.create({
         data: req.body
     })
-    res.send({
+    return res.send({
         msg: "order created",
         newOrder
     })
 })
 
-app.get("/history/:email", async (req, res) => {
+app.get("/history/:email", async (req, res): Promise<any> => {
     const result = emailSchema.safeParse(req.params.email)
     if (!result.success) {
-        res.status(400).send("invalid inputs")
+        return res.status(400).send({ 
+            msg: "invalid inputs", 
+            result 
+        })
     }
     const history = await prisma.booking.findMany({
         where: {
@@ -230,22 +237,22 @@ app.get("/history/:email", async (req, res) => {
         take: 20
     })
     if (!history) {
-        res.status(400).send({
+        return res.status(400).send({
             msg: "no history"
         })
     }
-    res.send({
+    return res.send({
         msg: "user found",
         history
     })
 })
 
-app.get("/history/all/:key" ,async (req, res) => {
+app.get("/history/all/:key", async (req, res): Promise<any> => {
     if (req.params.key !== "rishi") {
-        res.status(400).send("unauthorized")
+        return res.status(400).send("unauthorized")
     }
     const history = await prisma.booking.findMany()
-    res.send({
+    return res.send({
         history
     })
 })
