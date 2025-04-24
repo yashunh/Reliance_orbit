@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = calculatePrice;
 const factor = 0.000621371192;
-function calculatePrice(pickupLocation, dropLocation, vanType, worker, locationDetails) {
+function calculatePrice(pickupLocation, dropLocation, vanType, worker, distance) {
     let price = 0;
     if (pickupLocation.lift) {
         price += 30;
@@ -34,7 +34,7 @@ function calculatePrice(pickupLocation, dropLocation, vanType, worker, locationD
     else if (worker == 3) {
         price += 40;
     }
-    const distance = locationDetails.data.rows[0].elements[0].distance.value * factor;
+    distance = distance * factor;
     if (distance <= 30) {
         price += distance * 2;
     }
@@ -47,5 +47,6 @@ function calculatePrice(pickupLocation, dropLocation, vanType, worker, locationD
     else {
         price += distance;
     }
+    price = Math.ceil(price * 100) / 100;
     return price;
 }

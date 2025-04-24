@@ -60,7 +60,10 @@ const prisma = new client_1.PrismaClient();
 app.post("/price", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const result = zod_1.calculatePriceSchema.safeParse(req.body);
     if (!result.success) {
-        res.status(400).send("invalid inputs");
+        return res.status(400).send({
+            msg: "invalid inputs",
+            result
+        });
     }
     const { pickupLocation, dropLocation, vanType, worker } = req.body;
     const locationDetails = yield axios_1.default.get(process.env.DISTANCE_API || "", {
@@ -69,13 +72,19 @@ app.post("/price", (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             destinations: dropLocation.location
         }
     });
-    let price = (0, price_1.default)(pickupLocation, dropLocation, vanType, worker, locationDetails);
-    res.send({ price });
+    if (locationDetails.data.rows[0].elements[0].status !== "OK") {
+        return res.status(400).send({
+            msg: "invalid location",
+        });
+    }
+    const distance = locationDetails.data.rows[0].elements[0].distance.value;
+    let price = (0, price_1.default)(pickupLocation, dropLocation, vanType, worker, distance);
+    return res.send({ price });
 }));
 // app.post("/user/create", async(req,res)=>{
 //     const result = createUser.safeParse(req.body)
 //     if(!result.success){
-//         res.status(400).send("invalid inputs")
+//         res.status(400).send({msg:"invalid inputs",result})
 //     }
 //     const user = await prisma.user.findFirst({
 //         where: {
@@ -106,7 +115,7 @@ app.post("/price", (req, res) => __awaiter(void 0, void 0, void 0, function* () 
 // app.get("/user/login/email/:email", async(req,res)=>{
 //     const result = emailSchema.safeParse(req.params.email)
 //     if(!result.success){
-//         res.status(400).send("invalid inputs")
+//         res.status(400).send({msg:"invalid inputs",result})
 //     }
 //     const user = await prisma.user.findFirst({
 //         where: {
@@ -126,7 +135,7 @@ app.post("/price", (req, res) => __awaiter(void 0, void 0, void 0, function* () 
 // app.get("/user/login/number/:number", async(req,res)=>{
 //     const result = phoneNumberSchema.safeParse(req.params.number)
 //     if(!result.success){
-//         res.status(400).send("invalid inputs")
+//         res.status(400).send({msg:"invalid inputs",result})
 //     }
 //     const user = await prisma.user.findFirst({
 //         where: {
@@ -148,7 +157,7 @@ app.post("/price", (req, res) => __awaiter(void 0, void 0, void 0, function* () 
 // app.get("/order/history/email/:email", async(req,res)=>{
 //     const result = emailSchema.safeParse(req.params.email)
 //     if(!result.success){
-//         res.status(400).send("invalid inputs")
+//         res.status(400).send({msg:"invalid inputs",result})
 //     }
 //     const user = await prisma.user.findFirst({
 //         where: {
@@ -171,7 +180,7 @@ app.post("/price", (req, res) => __awaiter(void 0, void 0, void 0, function* () 
 // app.get("/order/history/number/:number", async(req,res)=>{
 //     const result = emailSchema.safeParse(req.params.number)
 //     if(!result.success){
-//         res.status(400).send("invalid inputs")
+//         res.status(400).send({msg:"invalid inputs",result})
 //     }
 //     const user = await prisma.user.findFirst({
 //         where: {
@@ -194,19 +203,19 @@ app.post("/price", (req, res) => __awaiter(void 0, void 0, void 0, function* () 
 app.post("/autocomplete", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { place } = req.body;
     if (!zod_1.location.safeParse(place).success) {
-        res.status(400).send("invalid inputs");
+        return res.status(400).send({ msg: "invalid inputs" });
     }
     const response = yield axios_1.default.get(process.env.AUTOCOMPLETE_API || "", {
         params: {
             input: place,
         }
     });
-    res.send(response.data);
+    return res.send(response.data);
 }));
 app.get("/postalcode/:place_id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const place_id = req.params.place_id;
     if (!zod_1.location.safeParse(place_id).success) {
-        res.status(400).send("invalid inputs");
+        return res.status(400).send({ msg: "invalid inputs" });
     }
     const data = yield axios_1.default.get(process.env.PLACE_API || "", {
         params: {
@@ -221,12 +230,12 @@ app.get("/postalcode/:place_id", (req, res) => __awaiter(void 0, void 0, void 0,
         }
     });
     const postalCode = response.data.results[0].address_components.find((c) => c.types.includes("postal_code"));
-    res.send(postalCode);
+    return res.send(postalCode);
 }));
 app.post("/distance", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { origin, destination } = req.body;
     if (!zod_1.location.safeParse(origin).success || !zod_1.location.safeParse(destination).success) {
-        res.status(400).send("invalid inputs");
+        return res.status(400).send({ msg: "invalid inputs" });
     }
     const response = yield axios_1.default.get(process.env.DISTANCE_API || "", {
         params: {
@@ -234,19 +243,44 @@ app.post("/distance", (req, res) => __awaiter(void 0, void 0, void 0, function* 
             destinations: destination
         }
     });
-    res.send(response.data);
+    return res.send(response.data);
 }));
 app.post("/new", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const result = zod_1.newSchema.safeParse(req.body);
     if (!result.success) {
-        res.status(400).send({ msg: "invalid inputs",
+        return res.status(400).send({
+            msg: "invalid inputs",
             result
         });
     }
+    const data = req.body;
+    // const locationDetails = await axios.get(process.env.DISTANCE_API || "", {
+    //     params: {
+    //         origins: data.fromLocation.location,
+    //         destinations: data.toLocation.location
+    //     }
+    // })
+    // if(locationDetails.data.rows[0].elements[0].status !== "OK"){
+    //     return res.status(400).send({
+    //         msg: "invalid location",
+    //     })
+    // }
+    // const distance = locationDetails.data.rows[0].elements[0].distance.value
+    // const duration = locationDetails.data.rows[0].elements[0].duration.text
+    // const calculatedPrice = calculatePrice(data.fromLocation,data.toLocation,data.vanType,data.worker,distance)
+    // if(data.price != calculatedPrice ){
+    //     data.price = calculatedPrice
+    // }
+    // else if(data.duration != duration){
+    //     data.duration = duration
+    // }
+    // else if(data.distance != distance/1000){
+    //     data.distance = distance
+    // }
     const newOrder = yield prisma.booking.create({
-        data: req.body
+        data: data
     });
-    res.send({
+    return res.send({
         msg: "order created",
         newOrder
     });
@@ -254,7 +288,10 @@ app.post("/new", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 app.get("/history/:email", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const result = zod_1.emailSchema.safeParse(req.params.email);
     if (!result.success) {
-        res.status(400).send("invalid inputs");
+        return res.status(400).send({
+            msg: "invalid inputs",
+            result
+        });
     }
     const history = yield prisma.booking.findMany({
         where: {
@@ -263,22 +300,26 @@ app.get("/history/:email", (req, res) => __awaiter(void 0, void 0, void 0, funct
         take: 20
     });
     if (!history) {
-        res.status(400).send({
+        return res.status(400).send({
             msg: "no history"
         });
     }
-    res.send({
+    return res.send({
         msg: "user found",
         history
     });
 }));
 app.get("/history/all/:key", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     if (req.params.key !== "rishi") {
-        res.status(400).send("unauthorized");
+        return res.status(400).send("unauthorized");
     }
     const history = yield prisma.booking.findMany();
-    res.send({
+    return res.send({
         history
     });
+}));
+app.use(((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).send('Something broke!');
 }));
 app.listen(3000, () => console.log('server at 3000'));

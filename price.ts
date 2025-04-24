@@ -10,7 +10,7 @@ export default function calculatePrice(pickupLocation: {
     floor: number,
     location: string,
     propertyType?: string
-}, vanType: string, worker: number, locationDetails: any) : number{
+}, vanType: string, worker: number, distance: number) : number{
     let price = 0;
     if(pickupLocation.lift){
         price += 30
@@ -40,7 +40,7 @@ export default function calculatePrice(pickupLocation: {
         price += 40
     }
 
-    const distance = locationDetails.data.rows[0].elements[0].distance.value * factor
+    distance = distance * factor
     if(distance <= 30){
         price += distance * 2
     } else if(distance <= 60){
@@ -50,5 +50,7 @@ export default function calculatePrice(pickupLocation: {
     } else{
         price += distance
     }
+
+    price = Math.ceil(price * 100) / 100
     return price
 }

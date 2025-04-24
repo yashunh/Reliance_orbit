@@ -1,4 +1,4 @@
-import express from "express"
+import express, { ErrorRequestHandler } from "express"
 import axios from "axios"
 import cors from "cors"
 import { calculatePriceSchema, createUser, emailSchema, location, newSchema, phoneNumberSchema, worker } from "./zod"
@@ -27,7 +27,13 @@ app.post("/price", async (req, res): Promise<any> => {
             destinations: dropLocation.location
         }
     })
-    let price = calculatePrice(pickupLocation, dropLocation, vanType, worker, locationDetails)
+    if(locationDetails.data.rows[0].elements[0].status !== "OK"){
+        return res.status(400).send({
+            msg: "invalid location",
+        })
+    }
+    const distance = locationDetails.data.rows[0].elements[0].distance.value
+    let price = calculatePrice(pickupLocation, dropLocation, vanType, worker, distance)
     return res.send({ price })
 })
 
@@ -213,8 +219,33 @@ app.post("/new", async (req, res): Promise<any> => {
             result
         })
     }
+    
+    const data = req.body
+    // const locationDetails = await axios.get(process.env.DISTANCE_API || "", {
+    //     params: {
+    //         origins: data.fromLocation.location,
+    //         destinations: data.toLocation.location
+    //     }
+    // })
+    // if(locationDetails.data.rows[0].elements[0].status !== "OK"){
+    //     return res.status(400).send({
+    //         msg: "invalid location",
+    //     })
+    // }
+    // const distance = locationDetails.data.rows[0].elements[0].distance.value
+    // const duration = locationDetails.data.rows[0].elements[0].duration.text
+    // const calculatedPrice = calculatePrice(data.fromLocation,data.toLocation,data.vanType,data.worker,distance)
+    // if(data.price != calculatedPrice ){
+    //     data.price = calculatedPrice
+    // }
+    // else if(data.duration != duration){
+    //     data.duration = duration
+    // }
+    // else if(data.distance != distance/1000){
+    //     data.distance = distance
+    // }
     const newOrder = await prisma.booking.create({
-        data: req.body
+        data: data
     })
     return res.send({
         msg: "order created",
@@ -256,5 +287,10 @@ app.get("/history/all/:key", async (req, res): Promise<any> => {
         history
     })
 })
+
+app.use(((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).send('Something broke!');
+}) as ErrorRequestHandler)
 
 app.listen(3000, () => console.log('server at 3000'))
