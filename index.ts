@@ -1,7 +1,7 @@
 import express, { ErrorRequestHandler } from "express"
 import axios from "axios"
 import cors from "cors"
-import { calculatePriceSchema, createUser, emailSchema, location, newSchema, phoneNumberSchema, worker } from "./zod"
+import { calculatePriceSchema, createUser, emailSchema, location, newSchema} from "./zod"
 import { PrismaClient } from "@prisma/client";
 import * as dotenv from "dotenv";
 import calculatePrice from "./price";
@@ -20,153 +20,79 @@ app.post("/price", async (req, res): Promise<any> => {
             result
         })
     }
-    const { pickupLocation, dropLocation, vanType, worker } = req.body
+    const { pickupLocation, dropLocation, vanType, worker, itemsToAssemble, itemsToDismantle } = req.body
     const locationDetails = await axios.get(process.env.DISTANCE_API || "", {
         params: {
             origins: pickupLocation.location,
             destinations: dropLocation.location
         }
     })
-    if(locationDetails.data.rows[0].elements[0].status !== "OK"){
+    if (locationDetails.data.rows[0].elements[0].status !== "OK") {
         return res.status(400).send({
             msg: "invalid location",
         })
     }
     const distance = locationDetails.data.rows[0].elements[0].distance.value
-    let price = calculatePrice(pickupLocation, dropLocation, vanType, worker, distance)
+    let price = calculatePrice(pickupLocation, dropLocation, vanType, worker, distance, itemsToAssemble, itemsToDismantle)
     return res.send({ price })
 })
 
-// app.post("/user/create", async(req,res)=>{
-//     const result = createUser.safeParse(req.body)
-//     if(!result.success){
-//         res.status(400).send({msg:"invalid inputs",result})
-//     }
-//     const user = await prisma.user.findFirst({
-//         where: {
-//             OR: [
-//                 { email: req.body.email },
-//                 { phoneNumber: req.body.phoneNumber }
-//             ]
-//         }
-//     })
-//     if(user){
-//         res.send({
-//             msg: "user already exist",
-//             user: user
-//         }) 
-//     }
-//     const newUser = await prisma.user.create({
-//         data: {
-//             username: req.body.username,
-//             email: req.body.emial,
-//             phoneNumber: req.body.phoneNumber
-//         }
-//     })
-//     res.send({
-//         msg: "new user created",
-//         user: newUser
-//     }) 
-// })
+app.post("/user/create", async (req, res): Promise<any> => {
+    const result = createUser.safeParse(req.body)
+    if (!result.success) {
+        return res.status(400).send({ msg: "invalid inputs", result })
+    }
+    const user = await prisma.user.findFirst({
+        where: {
+            email: req.body.email
+        }
+    })
+    if (user) {
+        return res.send({
+            msg: "user already exist",
+            user: user
+        })
+    }
+    const newUser = await prisma.user.create({
+        data: req.body
+    })
+    return res.send({
+        msg: "new user created",
+        user: newUser
+    })
+})
 
-// app.get("/user/login/email/:email", async(req,res)=>{
-//     const result = emailSchema.safeParse(req.params.email)
-//     if(!result.success){
-//         res.status(400).send({msg:"invalid inputs",result})
-//     }
-//     const user = await prisma.user.findFirst({
-//         where: {
-//             email: req.params.email
-//         }
-//     })
-//     if(!user){
-//         res.status(400).send({
-//             msg: "inavlid user"
-//         })    
-//     }
-//     res.send({
-//         msg: "user found",
-//         user: user
-//     })
-// })
-
-// app.get("/user/login/number/:number", async(req,res)=>{
-//     const result = phoneNumberSchema.safeParse(req.params.number)
-//     if(!result.success){
-//         res.status(400).send({msg:"invalid inputs",result})
-//     }
-//     const user = await prisma.user.findFirst({
-//         where: {
-//             phoneNumber: req.params.number
-//         }
-//     })
-//     if(!user){
-//         res.status(400).send({
-//             msg: "inavlid user"
-//         })    
-//     }
-//     res.send({
-//         msg: "user found",
-//         user: user
-//     })
-// })
-
-// app.post("/order/create", async(req,res)=>{
-
-// })
-
-// app.get("/order/history/email/:email", async(req,res)=>{
-//     const result = emailSchema.safeParse(req.params.email)
-//     if(!result.success){
-//         res.status(400).send({msg:"invalid inputs",result})
-//     }
-//     const user = await prisma.user.findFirst({
-//         where: {
-//             email: req.params.email
-//         },
-//         include: {
-//             orders: true
-//         }
-//     })
-//     if(!user){
-//         res.status(400).send({
-//             msg: "inavlid user"
-//         })    
-//     }
-//     res.send({
-//         msg: "user found",
-//         user: user
-//     })
-// })
-
-// app.get("/order/history/number/:number", async(req,res)=>{
-//     const result = emailSchema.safeParse(req.params.number)
-//     if(!result.success){
-//         res.status(400).send({msg:"invalid inputs",result})
-//     }
-//     const user = await prisma.user.findFirst({
-//         where: {
-//             phoneNumber: req.params.number
-//         },
-//         include: {
-//             orders: true
-//         }
-//     })
-//     if(!user){
-//         res.status(400).send({
-//             msg: "inavlid user"
-//         })    
-//     }
-//     res.send({
-//         msg: "user found",
-//         user: user
-//     })
-// })
+app.get("/login/email/:email", async (req, res): Promise<any> => {
+    const result = emailSchema.safeParse(req.params.email)
+    if (!result.success) {
+        return res.status(400).send({ msg: "invalid inputs", result })
+    }
+    const user = await prisma.user.findFirst({
+        where: {
+            email: req.params.email
+        }
+    })
+    if (!user) {
+        const newUser = await prisma.user.create({
+            data: {
+                email: req.params.email
+            }
+        })
+        return res.send({
+            msg: "new user created",
+            user: newUser
+        })
+    }
+    return res.send({
+        msg: "user found",
+        user: user
+    })
+})
 
 app.post("/autocomplete", async (req, res): Promise<any> => {
     const { place } = req.body
     if (!location.safeParse(place).success) {
-        return res.status(400).send({ msg: "invalid inputs"})
+        return res.status(400).send({ msg: "invalid inputs" })
     }
     const response = await axios.get(process.env.AUTOCOMPLETE_API || "", {
         params: {
@@ -179,7 +105,7 @@ app.post("/autocomplete", async (req, res): Promise<any> => {
 app.get("/postalcode/:place_id", async (req, res): Promise<any> => {
     const place_id = req.params.place_id
     if (!location.safeParse(place_id).success) {
-        return res.status(400).send({ msg: "invalid inputs"})
+        return res.status(400).send({ msg: "invalid inputs" })
     }
     const data = await axios.get(process.env.PLACE_API || "", {
         params: {
@@ -200,7 +126,7 @@ app.get("/postalcode/:place_id", async (req, res): Promise<any> => {
 app.post("/distance", async (req, res): Promise<any> => {
     const { origin, destination } = req.body
     if (!location.safeParse(origin).success || !location.safeParse(destination).success) {
-        return res.status(400).send({ msg: "invalid inputs"})
+        return res.status(400).send({ msg: "invalid inputs" })
     }
     const response = await axios.get(process.env.DISTANCE_API || "", {
         params: {
@@ -219,7 +145,7 @@ app.post("/new", async (req, res): Promise<any> => {
             result
         })
     }
-    
+
     const data = req.body
     // const locationDetails = await axios.get(process.env.DISTANCE_API || "", {
     //     params: {
@@ -234,7 +160,7 @@ app.post("/new", async (req, res): Promise<any> => {
     // }
     // const distance = locationDetails.data.rows[0].elements[0].distance.value
     // const duration = locationDetails.data.rows[0].elements[0].duration.text
-    // const calculatedPrice = calculatePrice(data.fromLocation,data.toLocation,data.vanType,data.worker,distance)
+    // const calculatedPrice = calculatePrice(pickupLocation, dropLocation, vanType, worker, distance, itemsToAssemble, itemsToDismental)
     // if(data.price != calculatedPrice ){
     //     data.price = calculatedPrice
     // }
@@ -256,9 +182,9 @@ app.post("/new", async (req, res): Promise<any> => {
 app.get("/history/:email", async (req, res): Promise<any> => {
     const result = emailSchema.safeParse(req.params.email)
     if (!result.success) {
-        return res.status(400).send({ 
-            msg: "invalid inputs", 
-            result 
+        return res.status(400).send({
+            msg: "invalid inputs",
+            result
         })
     }
     const history = await prisma.booking.findMany({
@@ -290,7 +216,10 @@ app.get("/history/all/:key", async (req, res): Promise<any> => {
 
 app.use(((err, req, res, next) => {
     console.error(err.stack);
-    res.status(500).send('Something broke!');
+    res.status(500).send({
+        msg: 'Something broke!',
+        err
+    });
 }) as ErrorRequestHandler)
 
 app.listen(3000, () => console.log('server at 3000'))

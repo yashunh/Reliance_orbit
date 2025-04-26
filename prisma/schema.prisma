@@ -13,26 +13,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id          Int     @id @default(autoincrement())
+  username    String?
+  email       String  @unique
+  phoneNumber String?
+  status      String  @default("Lead")
+}
+
 model Booking {
-  id Int @id @default(autoincrement())
-  username String
-  email String 
-  phoneNumber String
-  price Int
-  distance Float
-  route String
-  duration String
-  pickupdDate String
-  pickupdTime String
-  pickupAddress Json
-  dropDate String
-  dropTime String
-  dropAddress Json
-  vanType String
-  worker Int 
-  fromLocation Json
-  toLocation Json
-  details Json
-  quotationRef String
-  createdAt DateTime @default(now())
+  id               Int      @id @default(autoincrement())
+  username         String
+  email            String
+  phoneNumber      String
+  price            Int
+  distance         Float
+  route            String
+  duration         String
+  pickupdDate      String
+  pickupdTime      String
+  pickupAddress    Json
+  dropDate         String
+  dropTime         String
+  dropAddress      Json
+  vanType          String
+  worker           Int
+  itemsToDismantle Int      @default(0)
+  itemsToAssemble  Int      @default(0)
+  fromLocation     Json
+  toLocation       Json
+  details          Json
+  quotationRef     String
+  createdAt        DateTime @default(now())
 }

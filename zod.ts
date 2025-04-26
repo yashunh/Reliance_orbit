@@ -18,6 +18,10 @@ export const emailSchema = z.string().email()
 
 export const phoneNumberSchema = z.string()
 
+export const itemsToDismantle = z.number().min(0).optional()
+
+export const itemsToAssemble = z.number().min(0).optional()
+
 export const pickupLocation = z.object({
     location: location,
     floor: floorSchema,
@@ -36,13 +40,15 @@ export const calculatePriceSchema = z.object({
     pickupLocation: pickupLocation,
     dropLocation: dropLocation,
     vanType: vanType,
-    worker: worker
+    worker: worker,
+    itemsToDismantle: itemsToDismantle,
+    itemsToAssemble: itemsToAssemble
 })
 
 export const createUser = z.object({
-    username: z.string(),
+    username: z.string().optional(),
     email: z.string().email(),
-    phoneNumber: z.string()
+    phoneNumber: z.string().optional()
 })
 
 const orderDetails = z.object({})
@@ -66,5 +72,7 @@ export const newSchema = z.object({
     dropAddress: z.object({}),
     vanType: vanType,
     worker: worker,
+    itemsToDismantle: itemsToDismantle,
+    itemsToAssemble: itemsToAssemble,
     details: orderDetails
 })
