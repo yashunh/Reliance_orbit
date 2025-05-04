@@ -1,7 +1,7 @@
 import express, { ErrorRequestHandler } from "express"
 import axios from "axios"
 import cors from "cors"
-import { calculatePriceSchema, createUser, emailSchema, location, newSchema} from "./zod"
+import { calculatePriceSchema, createUser, emailSchema, location, newSchema, quoteSchema } from "./zod"
 import { PrismaClient } from "@prisma/client";
 import * as dotenv from "dotenv";
 import calculatePrice from "./price";
@@ -20,7 +20,7 @@ app.post("/price", async (req, res): Promise<any> => {
             result
         })
     }
-    const { pickupLocation, dropLocation, vanType, worker, itemsToAssemble, itemsToDismantle } = req.body
+    const { pickupLocation, dropLocation, vanType, worker, itemsToAssemble, itemsToDismantle, stoppage } = req.body
     const locationDetails = await axios.get(process.env.DISTANCE_API || "", {
         params: {
             origins: pickupLocation.location,
@@ -32,8 +32,10 @@ app.post("/price", async (req, res): Promise<any> => {
             msg: "invalid location",
         })
     }
+    const validStoppages = stoppage?.filter((stop: string) => stop.trim() !== "");
+    // dupliace stoppage not done
     const distance = locationDetails.data.rows[0].elements[0].distance.value
-    let price = calculatePrice(pickupLocation, dropLocation, vanType, worker, distance, itemsToAssemble, itemsToDismantle)
+    let price = calculatePrice(pickupLocation, dropLocation, vanType, worker, distance, itemsToAssemble, itemsToDismantle, validStoppages)
     return res.send({ price })
 })
 
@@ -146,7 +148,7 @@ app.post("/new", async (req, res): Promise<any> => {
         })
     }
 
-    const data = req.body
+    let data = req.body
     // const locationDetails = await axios.get(process.env.DISTANCE_API || "", {
     //     params: {
     //         origins: data.fromLocation.location,
@@ -170,12 +172,47 @@ app.post("/new", async (req, res): Promise<any> => {
     // else if(data.distance != distance/1000){
     //     data.distance = distance
     // }
+    data.stoppage = data.stoppage?.filter((stop: string) => stop.trim() !== "");
     const newOrder = await prisma.booking.create({
         data: data
     })
     return res.send({
         msg: "order created",
         newOrder
+    })
+})
+
+app.post("/quote", async (req, res): Promise<any> => {
+    const result = quoteSchema.safeParse(req.body)
+    if (!result.success) {
+        return res.status(400).send({
+            msg: "invalid inputs",
+            result
+        })
+    }
+
+    const data = req.body
+    const quote = await prisma.quotation.findFirst({
+        where: {
+            email: data.email
+        }
+    })
+    let newQuote;
+    if (quote) {
+        newQuote = await prisma.quotation.update({
+            where: {
+                email: data.email
+            },
+            data: data
+        })
+    } else {
+        newQuote = await prisma.quotation.create({
+            data: data
+        })
+    }
+    return res.send({
+        msg: "quote created",
+        newQuote
     })
 })
 

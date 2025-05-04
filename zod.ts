@@ -22,6 +22,8 @@ export const itemsToDismantle = z.number().min(0).optional()
 
 export const itemsToAssemble = z.number().min(0).optional()
 
+export const stoppage = z.array(z.string()).optional()
+
 export const pickupLocation = z.object({
     location: location,
     floor: floorSchema,
@@ -42,7 +44,8 @@ export const calculatePriceSchema = z.object({
     vanType: vanType,
     worker: worker,
     itemsToDismantle: itemsToDismantle,
-    itemsToAssemble: itemsToAssemble
+    itemsToAssemble: itemsToAssemble,
+    stoppage: stoppage,
 })
 
 export const createUser = z.object({
@@ -67,12 +70,35 @@ export const newSchema = z.object({
     dropDate: z.string(),
     dropTime: z.string(),
     duration: z.string(),
-    quotationRef: z.string(),
+    quotationRef: z.number(),
     pickupAddress: z.object({}),
     dropAddress: z.object({}),
+    stoppage: stoppage,
     vanType: vanType,
     worker: worker,
     itemsToDismantle: itemsToDismantle,
     itemsToAssemble: itemsToAssemble,
     details: orderDetails
+})
+
+export const quoteSchema = z.object({
+    email: z.string().email(),
+    price: z.number().optional(),
+    distance: z.number().optional(),
+    route: z.string().optional(),
+    fromLocation: pickupLocation.optional(),
+    toLocation: dropLocation.optional(),
+    pickupdDate: z.string().optional(),
+    pickupdTime: z.string().optional(),
+    dropDate: z.string().optional(),
+    dropTime: z.string().optional(),
+    duration: z.string().optional(),
+    pickupAddress: z.object({}).optional(),
+    dropAddress: z.object({}).optional(),
+    stoppage: stoppage,
+    vanType: vanType.optional(),
+    worker: worker.optional(),
+    itemsToDismantle: itemsToDismantle.optional(),
+    itemsToAssemble: itemsToAssemble.optional(),
+    details: orderDetails.optional()
 })

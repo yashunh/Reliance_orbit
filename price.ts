@@ -7,7 +7,8 @@ export default function calculatePrice(
     worker: number,
     distance: number,
     itemsToAssemble: number = 0,
-    itemsToDismantle: number = 0
+    itemsToDismantle: number = 0,
+    stoppage: string[]
 ): number {
     let price = 0;
 
@@ -28,6 +29,8 @@ export default function calculatePrice(
     else if (distance <= 60) price += distance * 1.5;
     else if (distance <= 90) price += distance * 1.3;
     else price += distance;
+
+    price += stoppage.length * 30
 
     return Math.ceil(price * 100) / 100;
 }

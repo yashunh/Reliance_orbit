@@ -21,6 +21,29 @@ model User {
   status      String  @default("Lead")
 }
 
+model Quotation {
+  id               Int      @id @default(autoincrement())
+  email            String   @unique
+  price            Int?
+  distance         Float?
+  route            String?
+  duration         String?
+  pickupdDate      String?
+  pickupdTime      String?
+  pickupAddress    Json?
+  dropDate         String?
+  dropTime         String?
+  dropAddress      Json?
+  vanType          String?
+  worker           Int?
+  itemsToDismantle Int?     @default(0)
+  itemsToAssemble  Int?     @default(0)
+  stoppage         String[]
+  fromLocation     Json?
+  toLocation       Json?
+  details          Json?
+}
+
 model Booking {
   id               Int      @id @default(autoincrement())
   username         String
@@ -40,9 +63,10 @@ model Booking {
   worker           Int
   itemsToDismantle Int      @default(0)
   itemsToAssemble  Int      @default(0)
+  stoppage         String[]
   fromLocation     Json
   toLocation       Json
   details          Json
-  quotationRef     String
+  quotationRef     Int
   createdAt        DateTime @default(now())
 }
