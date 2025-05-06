@@ -13,17 +13,15 @@ export default function calculatePrice(
     let price = 0;
 
     const calculateFloorCharge = (floor: number, liftAvailable: boolean): number => {
-        if (floor > 5) {
-            return liftAvailable ? 0 : 30;
+        if (liftAvailable) {
+            return 40; 
         } else {
-            if (!liftAvailable) {
-                if (floor === 1) return 10;
-                else if (floor === 2) return 20;
-                else if (floor === 3) return 30;
-                else return 30;
-            } else {
-                return floor === 2 ? 20 : 0;
-            }
+            if (floor === 1) return 20;
+            if (floor === 2) return 30;
+            if (floor === 3) return 40;
+            if (floor === 4) return 40;
+            if (floor >= 5) return 50;
+            return 0;
         }
     };
 
@@ -33,8 +31,8 @@ export default function calculatePrice(
     const vanPrices: Record<string, number> = { Small: 60, Medium: 70, Large: 80, Luton: 90 };
     price += vanPrices[vanType] ?? 0;
 
-    if (worker === 2) price += 20;
-    else if (worker === 3) price += 40;
+    if (worker === 2) price += 40;
+    else if (worker === 3) price += 60;
 
     price += itemsToDismantle * 20;
     price += itemsToAssemble * 30;
