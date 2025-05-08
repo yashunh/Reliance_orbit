@@ -161,19 +161,20 @@ app.post("/new", async (req, res): Promise<any> => {
     }
 
     if (data.distance != distance) {
-        return res.status(400).send({
-            msg: "invalid distance, calculate again",
-            data
-        })
-
+        // return res.status(400).send({
+        //     msg: "invalid distance, calculate again",
+        //     data
+        // })
+        data.distance = distance
     }
     const price = calculatePrice(data.fromLocation, data.toLocation, data.vanType, data.worker, data.distance, data.itemsToAssemble, data.itemsToDismantle, data.stoppage)
 
     if (data.price != price) {
-        return res.status(400).send({
-            msg: "invalid price, calculate again",
-            data
-        })
+        // return res.status(400).send({
+        //     msg: "invalid price, calculate again",
+        //     data
+        // })
+        data.price = price
     }
     const newOrder = await prisma.booking.create({
         data: data
@@ -212,20 +213,22 @@ app.post("/quote", async (req, res): Promise<any> => {
         }
 
         if (data.distance != distance) {
-            return res.status(400).send({
-                msg: "invalid distance, calculate again",
-                data
-            })
+            // return res.status(400).send({
+            //     msg: "invalid distance, calculate again",
+            //     data
+            // })
+            data.distance = distance
         }
     } else if (data.price) {
         const stoppage = data.stoppage || []
         const price = calculatePrice(data.pickupLocation, data.dropLocation, data.vanType, data.worker, data.distance, data.itemsToAssemble, data.itemsToDismantle, stoppage)
 
         if (data.price != price) {
-            return res.status(400).send({
-                msg: "invalid price, calculate again",
-                data
-            })
+            // return res.status(400).send({
+            //     msg: "invalid price, calculate again",
+            //     data
+            // })
+            data.price = price
         }
     }
 
