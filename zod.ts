@@ -54,6 +54,12 @@ export const createUser = z.object({
     phoneNumber: z.string().optional()
 })
 
+export const distanceSchema = z.object({
+    origin: z.string(),
+    destination: z.string(),
+    stoppage: stoppage
+})
+
 const orderDetails = z.object({})
 
 export const newSchema = z.object({
@@ -65,8 +71,8 @@ export const newSchema = z.object({
     route: z.string(),
     fromLocation: pickupLocation,
     toLocation: dropLocation,
-    pickupdDate: z.string(),
-    pickupdTime: z.string(),
+    pickupDate: z.string(),
+    pickupTime: z.string(),
     dropDate: z.string(),
     dropTime: z.string(),
     duration: z.string(),
@@ -88,8 +94,8 @@ export const quoteSchema = z.object({
     route: z.string().optional(),
     fromLocation: pickupLocation.optional(),
     toLocation: dropLocation.optional(),
-    pickupdDate: z.string().optional(),
-    pickupdTime: z.string().optional(),
+    pickupDate: z.string().optional(),
+    pickupTime: z.string().optional(),
     dropDate: z.string().optional(),
     dropTime: z.string().optional(),
     duration: z.string().optional(),

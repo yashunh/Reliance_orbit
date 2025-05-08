@@ -43,6 +43,8 @@ export default function calculatePrice(
     else if (distance <= 90) price += distance * 1.3;
     else price += distance;
 
+    stoppage = stoppage?.filter((stop: string) => stop.trim() !== "")
+    stoppage = [...new Set(stoppage)]
     price += stoppage.length * 30;
 
     return Math.ceil(price * 100) / 100;

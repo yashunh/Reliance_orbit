@@ -1,10 +1,11 @@
 import express, { ErrorRequestHandler } from "express"
 import axios from "axios"
 import cors from "cors"
-import { calculatePriceSchema, createUser, emailSchema, location, newSchema, quoteSchema } from "./zod"
+import { calculatePriceSchema, createUser, distanceSchema, emailSchema, location, newSchema, quoteSchema } from "./zod"
 import { PrismaClient } from "@prisma/client";
 import * as dotenv from "dotenv";
 import calculatePrice from "./price";
+import calculateDistance from "./distance";
 
 dotenv.config({ path: __dirname + '../.env' });
 const app = express()
@@ -20,22 +21,17 @@ app.post("/price", async (req, res): Promise<any> => {
             result
         })
     }
-    const { pickupLocation, dropLocation, vanType, worker, itemsToAssemble, itemsToDismantle, stoppage } = req.body
-    const locationDetails = await axios.get(process.env.DISTANCE_API || "", {
-        params: {
-            origins: pickupLocation.location,
-            destinations: dropLocation.location
-        }
-    })
-    if (locationDetails.data.rows[0].elements[0].status !== "OK") {
+    const { pickupLocation, dropLocation, vanType, worker, itemsToAssemble, itemsToDismantle } = req.body
+    const stoppage = req.body.stoppage || []
+
+    const [distance, duration] = await calculateDistance(pickupLocation.location, dropLocation.location, stoppage)
+    if (distance == -1 || duration == -1) {
         return res.status(400).send({
             msg: "invalid location",
         })
     }
-    const validStoppages = stoppage?.filter((stop: string) => stop.trim() !== "");
-    // dupliace stoppage not done
-    const distance = locationDetails.data.rows[0].elements[0].distance.value
-    let price = calculatePrice(pickupLocation, dropLocation, vanType, worker, distance, itemsToAssemble, itemsToDismantle, validStoppages)
+
+    let price = calculatePrice(pickupLocation, dropLocation, vanType, worker, distance, itemsToAssemble, itemsToDismantle, stoppage)
     return res.send({ price })
 })
 
@@ -126,17 +122,21 @@ app.get("/postalcode/:place_id", async (req, res): Promise<any> => {
 })
 
 app.post("/distance", async (req, res): Promise<any> => {
-    const { origin, destination } = req.body
-    if (!location.safeParse(origin).success || !location.safeParse(destination).success) {
-        return res.status(400).send({ msg: "invalid inputs" })
+    const result = distanceSchema.safeParse(req.body)
+    if (!result.success) {
+        return res.status(400).send({ msg: "invalid inputs", result })
     }
-    const response = await axios.get(process.env.DISTANCE_API || "", {
-        params: {
-            origins: origin,
-            destinations: destination
-        }
-    })
-    return res.send(response.data)
+    const { origin, destination } = req.body
+    const stoppage = req.body.stoppage || []
+
+    const response = await calculateDistance(origin, destination, stoppage)
+    if (response[0] == -1 || response[1] == -1) {
+        return res.status(400).send({
+            msg: "invalid location",
+        })
+    }
+
+    return res.send({ response })
 })
 
 app.post("/new", async (req, res): Promise<any> => {
@@ -149,30 +149,32 @@ app.post("/new", async (req, res): Promise<any> => {
     }
 
     let data = req.body
-    // const locationDetails = await axios.get(process.env.DISTANCE_API || "", {
-    //     params: {
-    //         origins: data.fromLocation.location,
-    //         destinations: data.toLocation.location
-    //     }
-    // })
-    // if(locationDetails.data.rows[0].elements[0].status !== "OK"){
-    //     return res.status(400).send({
-    //         msg: "invalid location",
-    //     })
-    // }
-    // const distance = locationDetails.data.rows[0].elements[0].distance.value
-    // const duration = locationDetails.data.rows[0].elements[0].duration.text
-    // const calculatedPrice = calculatePrice(pickupLocation, dropLocation, vanType, worker, distance, itemsToAssemble, itemsToDismental)
-    // if(data.price != calculatedPrice ){
-    //     data.price = calculatedPrice
-    // }
-    // else if(data.duration != duration){
-    //     data.duration = duration
-    // }
-    // else if(data.distance != distance/1000){
-    //     data.distance = distance
-    // }
-    data.stoppage = data.stoppage?.filter((stop: string) => stop.trim() !== "");
+    data.stoppage = data.stoppage?.filter((stop: string) => stop.trim() !== "")
+    data.stoppage = [...new Set(data.stoppage)]
+
+    const [distance, duration] = await calculateDistance(data.fromLocation.location, data.toLocation.location, data.stoppage)
+    if (distance == -1 || duration == -1) {
+        return res.status(400).send({
+            msg: "invalid location",
+            data
+        })
+    }
+
+    if (data.distance != distance) {
+        return res.status(400).send({
+            msg: "invalid distance, calculate again",
+            data
+        })
+
+    }
+    const price = calculatePrice(data.fromLocation, data.toLocation, data.vanType, data.worker, data.distance, data.itemsToAssemble, data.itemsToDismantle, data.stoppage)
+
+    if (data.price != price) {
+        return res.status(400).send({
+            msg: "invalid price, calculate again",
+            data
+        })
+    }
     const newOrder = await prisma.booking.create({
         data: data
     })
@@ -192,6 +194,41 @@ app.post("/quote", async (req, res): Promise<any> => {
     }
 
     const data = req.body
+    if (data.distance || data.duration) {
+        const stoppage = data.stoppage || []
+        if (!data.fromLocation.location || !data.toLocation.location) {
+            return res.status(400).send({
+                msg: "invalid location for distance calculation, select again",
+                data
+            })
+        }
+
+        const [distance, duration] = await calculateDistance(data.fromLocation.location, data.toLocation.location, stoppage)
+        if (distance == -1 || duration == -1) {
+            return res.status(400).send({
+                msg: "invalid location",
+                data
+            })
+        }
+
+        if (data.distance != distance) {
+            return res.status(400).send({
+                msg: "invalid distance, calculate again",
+                data
+            })
+        }
+    } else if (data.price) {
+        const stoppage = data.stoppage || []
+        const price = calculatePrice(data.pickupLocation, data.dropLocation, data.vanType, data.worker, data.distance, data.itemsToAssemble, data.itemsToDismantle, stoppage)
+
+        if (data.price != price) {
+            return res.status(400).send({
+                msg: "invalid price, calculate again",
+                data
+            })
+        }
+    }
+
     const quote = await prisma.quotation.findFirst({
         where: {
             email: data.email
@@ -227,8 +264,7 @@ app.get("/history/:email", async (req, res): Promise<any> => {
     const history = await prisma.booking.findMany({
         where: {
             email: req.params.email
-        },
-        take: 20
+        }
     })
     if (!history) {
         return res.status(400).send({
